@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>CFI DataClean User Guide</title>
+  <style>
+    @page {
+      margin: 0.75in;
+    }
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: #1f2933;
+      line-height: 1.45;
+      font-size: 11pt;
+      max-width: 8.5in;
+      margin: 0 auto;
+      background: #ffffff;
+    }
+    h1 {
+      font-size: 26pt;
+      color: #1f3d2b;
+      margin: 0 0 6px 0;
+      padding-bottom: 6px;
+      border-bottom: 3px solid #5b7f4d;
+    }
+    h2 {
+      font-size: 17pt;
+      color: #1f3d2b;
+      margin-top: 28px;
+      padding-top: 12px;
+      border-top: 1px solid #cbd5c0;
+    }
+    h3 {
+      font-size: 13pt;
+      color: #2f4f3b;
+      margin-top: 18px;
+      margin-bottom: 6px;
+    }
+    p {
+      margin: 6px 0 10px 0;
+    }
+    ul, ol {
+      margin-top: 6px;
+      margin-bottom: 12px;
+      padding-left: 24px;
+    }
+    li {
+      margin-bottom: 5px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0 16px 0;
+      font-size: 10.5pt;
+    }
+    th {
+      background: #e7eee1;
+      color: #1f3d2b;
+      text-align: left;
+      border: 1px solid #b8c6b0;
+      padding: 7px;
+    }
+    td {
+      border: 1px solid #d5ddd0;
+      padding: 7px;
+      vertical-align: top;
+    }
+    .subtitle {
+      color: #4b5563;
+      font-size: 12pt;
+      margin-bottom: 3px;
+    }
+    .credit {
+      color: #4b5563;
+      font-size: 10.5pt;
+      margin-bottom: 18px;
+    }
+    .note {
+      border-left: 5px solid #5b7f4d;
+      background: #f5f8f2;
+      padding: 10px 12px;
+      margin: 12px 0;
+    }
+    .warning {
+      border-left: 5px solid #b7791f;
+      background: #fff8e8;
+      padding: 10px 12px;
+      margin: 12px 0;
+    }
+    .plain-box {
+      border: 1px solid #ccd6c7;
+      background: #fbfcfa;
+      padding: 12px;
+      margin: 12px 0;
+    }
+    .small {
+      font-size: 9.5pt;
+      color: #4b5563;
+    }
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      background: #f1f5f9;
+      padding: 1px 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>CFI DataClean User Guide</h1>
+  <p class="subtitle">A plain-language guide for cleaning CFI forest inventory data in Microsoft Access.</p>
+  <p class="credit">Developed by the BIA Division of Forestry, Branch of Forest Inventory and Planning.</p>
+  <p class="small">Last reviewed for app build 1.0.00 on July 8, 2026.</p>
+
+  <div class="note">
+    <strong>Short version:</strong> Pick an Access database, review the Run options, optionally add AI settings or a project manual on the AI guidance tab, click <strong>Run</strong>, then review the exported Excel workbook. CFI DataClean checks a temporary copy of the database and does not change your original database during a Run.
+  </div>
+
+  <div class="note">
+    <strong>Build 1.0.00 note:</strong> This release is the current modern-UI copy of CFI DataClean. It keeps the cleaner v3 window and includes recent refinements for Total Height Protocol controls, always-split history export columns, selected-period DBH shrinkage, duplicate height-shrinkage cleanup, clearer run-option grouping, the BIA header credit, front-loaded current/previous period number and error-count columns, a TotalHeight tab layout that puts previous/current height comparison columns directly after RuleName, a tree IDBH tab layout that separates green IDBH jump checks from red IDBH shrinkage checks, field-tab color zones, detailed performance logging, the PeriodScope export column for filtering current-period, previous-period, other-period, and all/no-period rows, legacy TotalHeight support for old problem codes and live TreeClass/TreeStatus values, clearer regen square-count rows decoded from RegenMeasKey, stronger regen required-species/stem-count checks, built-in regen MinorPlot required checks, fixed regen SpeciesCode identity columns in report exports, plot/tree/regen rule-coverage diagnostics for likely setup gaps, stronger selected-period filtering for regen rows that use ProjectPeriodID, corrected regen StemCount max handling so the configured Max regen stems value is used in SQL and export wording, and startup run-log lines that print the configured range limits for easier troubleshooting.
+  </div>
+
+  <h2>1. What CFI DataClean Is For</h2>
+  <p>CFI DataClean helps review forest inventory data for likely data-entry mistakes and internal consistency issues. It is designed for CFI-style Microsoft Access databases.</p>
+  <p>CFI DataClean can help find issues such as:</p>
+  <ul>
+    <li>Missing, zero, negative, or unusually large DBH, height, and stem-count values.</li>
+    <li>Invalid code values based on the database setup tables.</li>
+    <li>TreeHistory transitions that do not make sense across measurement periods.</li>
+    <li>Ingrowth mistakes, such as using TreeHistory <code>10</code> on install plots.</li>
+    <li>Plot data recorded on plots coded as missing, not measured, dropped off reservation, or dropped other, except for allowed preload/remark fields.</li>
+    <li>Tree data recorded on plots coded as missing, not measured, dropped off reservation, or dropped other.</li>
+    <li>Regen data recorded on plots coded as missing, not measured, dropped off reservation, or dropped other.</li>
+    <li>TreeClass or TreeStatus values that may not match TreeHistory.</li>
+    <li>Plot, tree, regen, and custom-measurement tables that do not line up.</li>
+    <li>Missing required plot entries, tree species, crown fields, radial increment, and regen fields.</li>
+  </ul>
+
+  <div class="warning">
+    <strong>Important:</strong> CFI DataClean points out records that need review. It does not decide every correction for you. Use the exported workbook, field records, project manual, and Access verification SQL to confirm changes before updating the database.
+    Run the main CFI DataClean cleaning review after project codes have been crosswalked to the current standard. During a crosswalk, ignore cleaning-style findings that are caused by old standard codes changing meaning; treat those as crosswalk review items, not final data-entry errors.
+  </div>
+
+  <h2>2. Files You Will See</h2>
+  <table>
+    <tr>
+      <th>File</th>
+      <th>What it is for</th>
+    </tr>
+    <tr>
+      <td><code>CFI DataClean.cmd</code></td>
+      <td>Main portable launcher. Double-click this to open the app after the folder has been extracted.</td>
+    </tr>
+    <tr>
+      <td><code>_CFIDataClean_AppFiles\CFIDataClean-debug.cmd</code></td>
+      <td>Troubleshooting launcher. Use this only if the app opens and closes immediately.</td>
+    </tr>
+    <tr>
+      <td><code>_CFIDataClean_AppFiles</code></td>
+      <td>Support folder that contains the PowerShell app, hidden launcher, debug launcher, icons, reference files, README, and security notes. Most users do not need to open it.</td>
+    </tr>
+    <tr>
+      <td><code>CFI DataClean-How-To-Guide.html</code></td>
+      <td>This user guide. It can be opened in Microsoft Word.</td>
+    </tr>
+    <tr>
+      <td><code>_CFIDataClean_AppFiles\README.md</code></td>
+      <td>Technical notes for the app folder.</td>
+    </tr>
+  </table>
+
+  <h2>3. Before You Start</h2>
+  <p>Before running CFI DataClean, make sure you have:</p>
+  <ul>
+    <li>A CFI Access database file, usually ending in <code>.mdb</code> or <code>.accdb</code>.</li>
+    <li>Microsoft Access or the 32-bit Access Database Engine installed.</li>
+    <li>A project manual, if you want the optional AI features to use project-specific guidance.</li>
+    <li>The correct woodland species codes, if woodland species should be excluded from shrinking DBH checks.</li>
+    <li>Any project-specific minor-plot rules for tree height or regen collection.</li>
+  </ul>
+
+  <h2>4. Opening the App</h2>
+  <ol>
+    <li>If CFI DataClean was sent as a ZIP file, right-click the ZIP and choose <strong>Extract All</strong>. Do not run CFI DataClean from inside the compressed-folder preview.</li>
+    <li>Open the CFI DataClean project folder.</li>
+    <li>Double-click <code>CFI DataClean.cmd</code>.</li>
+    <li>Wait for the loading splash to close and the CFI DataClean window to open.</li>
+  </ol>
+  <p>If the app opens briefly and then closes, open <code>_CFIDataClean_AppFiles</code> and double-click <code>CFIDataClean-debug.cmd</code>. The debug launcher keeps the command window visible so the startup message can be read.</p>
+
+  <h2>5. Choosing a Database</h2>
+  <ol>
+    <li>Click <strong>Browse</strong> beside <strong>Access database</strong>.</li>
+    <li>Choose the Access database you want to review.</li>
+    <li>CFI DataClean connects automatically after you choose the file.</li>
+  </ol>
+  <p>There is no separate Connect button. Once the database path is selected, CFI DataClean tries to connect and read the database setup.</p>
+
+  <div class="note">
+    <strong>Safety note:</strong> When you click <strong>Run</strong>, CFI DataClean checks a temporary copy of the database. Your selected Access database is not changed by the Run workflow.
+  </div>
+
+  <h2>6. Adding a Project Manual for AI</h2>
+  <p>The project manual is optional and is used only by the AI features. Uploading a manual does not change CFI DataClean's built-in cleaning checks, does not decide which records are flagged, and does not update the Access database.</p>
+  <p>When AI is enabled, CFI DataClean can send relevant manual excerpts to the model so AI chat answers and <code>AIMessage</code> export guidance can be more project-specific.</p>
+  <ol>
+    <li>Open the <strong>AI guidance</strong> tab.</li>
+    <li>Click <strong>Browse</strong> beside <strong>Project manual</strong>.</li>
+    <li>Choose a manual or guide file.</li>
+    <li>CFI DataClean reads the manual text when possible.</li>
+  </ol>
+  <p>Supported manual formats include <code>.pdf</code>, <code>.docx</code>, <code>.xlsx</code>, <code>.xlsm</code>, <code>.xls</code>, <code>.txt</code>, <code>.md</code>, <code>.csv</code>, and <code>.json</code>.</p>
+  <p>PDF manuals work best when the text is selectable. Scanned image-only PDFs may need OCR before CFI DataClean can read them well.</p>
+
+  <h2>7. Understanding Run Options</h2>
+  <p>The Run options tell CFI DataClean how strict to be for this project. You should review these before clicking <strong>Run</strong>.</p>
+
+  <h3>Measurement period options</h3>
+  <table>
+    <tr>
+      <th>Option</th>
+      <th>Plain-language meaning</th>
+    </tr>
+    <tr>
+      <td><strong>Limit normal checks to measurement period(s)</strong></td>
+      <td>Keep this on when you only want most checks to look at the current and previous measurement periods. TreeHistory transition checks still review all periods.</td>
+    </tr>
+    <tr>
+      <td><strong>Single measurement project</strong></td>
+      <td>Use this for a first-measurement project. CFI DataClean fixes the current period at <code>1</code> and ignores the previous-period box.</td>
+    </tr>
+    <tr>
+      <td><strong>Current measurement period #</strong></td>
+      <td>The period being reviewed now. CFI DataClean fills this from the highest PeriodNumber it finds.</td>
+    </tr>
+    <tr>
+      <td><strong>Previous measurement period #</strong></td>
+      <td>The earlier period used for comparison. CFI DataClean fills this from the next lower PeriodNumber it finds.</td>
+    </tr>
+  </table>
+
+  <h3>Range and jump options</h3>
+  <table>
+    <tr>
+      <th>Option</th>
+      <th>Default</th>
+      <th>What it controls</th>
+    </tr>
+    <tr>
+      <td><strong>Max IDBH</strong></td>
+      <td><code>500</code></td>
+      <td>Largest normal tree DBH value. The box allows up to <code>3500</code> for very large-tree projects.</td>
+    </tr>
+    <tr>
+      <td><strong>Max height</strong></td>
+      <td><code>150</code></td>
+      <td>Largest normal tree height value.</td>
+    </tr>
+    <tr>
+      <td><strong>IDBH jump</strong></td>
+      <td><code>100</code></td>
+      <td>Flags a large DBH increase between measurement periods.</td>
+    </tr>
+    <tr>
+      <td><strong>Height jump</strong></td>
+      <td><code>20</code></td>
+      <td>Flags a large height increase between measurement periods.</td>
+    </tr>
+    <tr>
+      <td><strong>Max regen stems</strong></td>
+      <td><code>100</code></td>
+      <td>Largest normal regen stem count.</td>
+    </tr>
+  </table>
+
+  <h3>Tree DBH requirement options</h3>
+  <ul>
+    <li><strong>Require DBH for new mortality (TreeHistory 2/3):</strong> Turn this on only when the project requires DBH for new mortality trees.</li>
+    <li><strong>Require DBH for old mortality (TreeHistory 7):</strong> Turn this on only when the project requires DBH for old mortality trees.</li>
+  </ul>
+
+  <h3>Total Height Protocol options</h3>
+  <p>Some projects measure height on every live tree, while other projects measure only a subsample. Use the Total Height Protocol option before clicking <strong>Run</strong> so CFI DataClean does not over-report missing heights.</p>
+  <ul>
+    <li><strong>Require height for new mortality (TreeHistory 2/3):</strong> Turn this on only when the project requires height for new mortality trees.</li>
+    <li><strong>Require height for old mortality (TreeHistory 7):</strong> Turn this on only when the project requires height for old mortality trees.</li>
+    <li><strong>Minor plots where tree height is required:</strong> Use this when tree height is required only on certain minor plots. Leave blank when the rule should apply to all minor plots.</li>
+  </ul>
+  <table>
+    <tr>
+      <th>Protocol</th>
+      <th>When to use it</th>
+    </tr>
+    <tr>
+      <td><strong>Normal required-height rules</strong></td>
+      <td>Use this for the standard CFI DataClean behavior. Blank live-tree heights are checked using the selected TreeHistory and minor-plot rules.</td>
+    </tr>
+    <tr>
+      <td><strong>100% live-tree heights</strong></td>
+      <td>Use this when every live tree with TreeHistory <code>0</code>, <code>5</code>, or <code>10</code> requires total height, unless a selected problem code such as <code>123</code>, <code>127</code>, or <code>128</code>, or old legacy code <code>72</code>, <code>74</code>, or <code>75</code>, means height should be blank.</td>
+    </tr>
+    <tr>
+      <td><strong>Subsample by species and 2-inch IDBH class</strong></td>
+      <td>Use this when the project only requires a minimum number of heights per plot, species, and 2-inch IDBH class. CFI DataClean reports grouped subsample shortages instead of flagging every blank live-tree height.</td>
+    </tr>
+  </table>
+  <p>For subsample mode, the default minimum count is <code>2</code> and the minimum eligible IDBH is <code>50</code> for 5.0 inches. The <strong>Require all heights at/above IDBH</strong> checkbox is off by default. Turn it on only when a project requires every eligible tree above a project-specific IDBH threshold, such as <code>170</code> for 17.0 inches. These boxes use recorded IDBH units.</p>
+  <p>CFI DataClean assumes <code>TreeNumber</code> starts at north and increases clockwise. In subsample mode, it can flag a group when enough heights were recorded overall, but one of the first required eligible TreeNumbers is blank while a later TreeNumber has height.</p>
+  <p>Use <strong>Rare species requiring 100% live-tree height</strong> for species that always require height when TreeHistory is <code>0</code>, <code>5</code>, or <code>10</code>. Enter numeric SpeciesCode values such as <code>122, 202</code>. Selected problem-code no-height exceptions still apply.</p>
+  <p>For older databases that have not been crosswalked yet, CFI DataClean also treats TreeClass <code>1</code>, <code>2</code>, <code>3</code>, <code>4</code>, and <code>9</code>, and TreeStatus <code>1</code>, <code>2</code>, and <code>3</code>, as live-tree status for TotalHeight checks.</p>
+
+  <h3>Problem-code height options</h3>
+  <p>CFI DataClean can flag entered height values for timber trees when certain problem codes usually mean height should be blank:</p>
+  <ul>
+    <li><code>127</code> - timber broken or missing top.</li>
+    <li><code>128</code> - timber dead top.</li>
+    <li><code>123</code> - timber lean greater than 15 degrees.</li>
+    <li>Old legacy codes are honored automatically: <code>74</code> is broken top, <code>75</code> is dead top, and <code>72</code> is lean greater than 15 degrees.</li>
+  </ul>
+  <p>For these selected timber problem-code cases, blank height is treated as correct, including new ingrowth trees with TreeHistory <code>10</code>. Woodland species entered in the woodland species box are skipped for these problem-code height rules.</p>
+
+  <h3>Woodland species box</h3>
+  <p>Use <strong>Woodland species to exclude from shrinking diameters</strong> when woodland species are allowed to shrink in DBH and should not be flagged by shrinking DBH checks.</p>
+  <p>Woodland trees are different from timber trees because they may have several measured stems or limbs. A lower DBH or EDRC in a later period can be valid when a stem or limb was cut, died, broke off, or no longer qualifies as a measured stem. In that situation, the measured stem count and overall diameter summary can go down without being a data-entry error.</p>
+  <p>Enter numeric species codes separated by commas, spaces, semicolons, or pipes.</p>
+  <p>Example: <code>65, 66, 68</code></p>
+
+  <h3>Regen minor-plot rules</h3>
+  <p>Some projects collect seedlings and saplings on different minor plots. CFI DataClean lets you enter allowed minor plots for six regen groups:</p>
+  <ul>
+    <li>Timber seedlings, IDBH <code>0</code>.</li>
+    <li>Timber saplings, IDBH <code>20</code>.</li>
+    <li>Timber saplings, IDBH <code>40</code>.</li>
+    <li>Woodland seedlings, IDBH <code>0</code>.</li>
+    <li>Woodland saplings, IDBH <code>20</code>.</li>
+    <li>Woodland saplings, IDBH <code>40</code>.</li>
+  </ul>
+  <p>CFI DataClean always flags blank Regen MinorPlot when SpeciesCode is greater than <code>0</code>. Leave a category box blank only when that category should not have an allowed-value list enforced. When a category box has values, CFI DataClean also flags nonblank MinorPlot values that are not in that list.</p>
+  <p>If matching regen rows exist but the setup does not give CFI DataClean enough information to verify the rule, CFI DataClean adds a <strong>Rule coverage diagnostic</strong> row to the export. Examples include no regen MinorPlot allowed lists entered, a blank allowed-list box for a regen group that has matching records, woodland MinorPlot rules entered without woodland species codes, or SpeciesCode marked inactive in AppColumns. Treat these as setup warnings to review, not as direct value edits.</p>
+
+  <h3>Split DBH, height, and TreeHistory history into columns</h3>
+  <p>CFI DataClean always splits DBH, TotalHeight, and TreeHistory history into separate export columns when those values are available. This makes history comparisons easier to read in Excel. Height comparison rows include a HeightChange column, where positive means the current or later height is taller and negative means it is shorter.</p>
+
+  <h2>8. Optional AI Guidance</h2>
+  <p>AI is optional. CFI DataClean can run without AI, and the main cleaning rules still work.</p>
+  <p>The AI controls are on the <strong>AI guidance</strong> tab so they stay out of the way during normal Run setup. Use AI when you want extra project-specific wording in the workbook or want to ask questions about the connected database.</p>
+  <p>The project manual upload is also on the <strong>AI guidance</strong> tab because the manual is AI context only. The manual can help AI write better <code>AIMessage</code> guidance, but it does not change the core CFI DataClean rules.</p>
+
+  <h3>API keys and Azure AI access</h3>
+  <p>API keys are granted through the BIA AI point of contact. You do not need an API key to run CFI DataClean. If you do not have one, you can still run the built-in cleaning checks and export the Excel workbook.</p>
+  <p>API keys are accessed through the BIA Azure AI endpoint in Microsoft Azure AI Foundry at <code>https://ai.azure.com/</code>.</p>
+  <ol>
+    <li>Go to <code>https://ai.azure.com/</code>.</li>
+    <li>Confirm you are in the correct environment.</li>
+    <li>Click <strong>Build</strong> in the top-right corner.</li>
+    <li>Click <strong>Deployments</strong> in the left toolbar.</li>
+    <li>Click the model you want to use from the list of available models.</li>
+    <li>In CFI DataClean, replace the model name with that selected model or deployment name.</li>
+    <li>In Azure AI Foundry, open the model's <strong>Details</strong> tab.</li>
+    <li>Copy the <strong>Target URL</strong> into the CFI DataClean endpoint box. Use only the base endpoint, without extra text after <code>.com</code>. It should look similar to <code>https://doi-training-foundry.services.ai.azure.com/</code>.</li>
+    <li>Copy the key from that same Azure AI Foundry deployment/environment and paste it into the CFI DataClean API key box.</li>
+    <li>Click <strong>Test connection</strong> in CFI DataClean before running AI-assisted exports.</li>
+  </ol>
+  <div class="warning">
+    <strong>Protect your key:</strong> The API key is unique to the Azure AI environment. Do not share it with anyone who does not have access to your endpoint.
+  </div>
+  <p class="small">These Azure AI Foundry steps reflect the current process as of June 8, 2026. Microsoft changes its screens regularly, so the exact button names or layout may change. For current BIA AI access questions, contact Chris LaCroix in Teams at <code>christopher.lacroix@bia.gov</code>.</p>
+
+  <h3>To set up AI</h3>
+  <ol>
+    <li>Open the <strong>AI guidance</strong> tab.</li>
+    <li>Turn on <strong>AI helper on</strong>.</li>
+    <li>Open the AI helper.</li>
+    <li>Confirm the endpoint is the approved BIA Azure AI Foundry endpoint, such as <code>https://doi-training-foundry.services.ai.azure.com/</code>.</li>
+    <li>Confirm the model/deployment name is <code>gpt-4.1-mini</code>, unless your project uses another approved deployment.</li>
+    <li>Enter the API key.</li>
+    <li>Click <strong>Test connection</strong>.</li>
+  </ol>
+
+  <h3>AI export guidance</h3>
+  <p>If you want AI wording in the Excel export, check <strong>Use AI guidance in export</strong> before clicking <strong>Run</strong>.</p>
+  <p>Leave <strong>Compact AI export</strong> checked unless you have a specific reason to send larger prompts. Compact mode is faster and helps avoid Azure request-size errors.</p>
+
+  <div class="warning">
+    <strong>Do not worry if AI is not set up.</strong> If you click Run without AI information, CFI DataClean warns you. You can continue without AI, and the workbook will still include the built-in cleaning findings.
+  </div>
+
+  <h2>9. Running the Checks</h2>
+  <ol>
+    <li>Select the Access database.</li>
+    <li>Optional: open the <strong>AI guidance</strong> tab and select a project manual if you plan to use AI chat or AI export guidance.</li>
+    <li>Review the Run options.</li>
+    <li>Optional: open the <strong>AI guidance</strong> tab, turn on AI guidance, and test the connection.</li>
+    <li>Click <strong>Run</strong>.</li>
+    <li>Read the confirmation message and click <strong>Continue</strong> if everything looks right.</li>
+    <li>Watch the status text, progress bar, elapsed time, and window title.</li>
+    <li>When the run finishes, open the Excel workbook when prompted.</li>
+  </ol>
+
+  <p>During a run, CFI DataClean disables controls that could change the run. This prevents accidental changes while the app is checking the temporary database copy.</p>
+  <p>If you need to stop a run, click <strong>Cancel run</strong>. CFI DataClean cancels between major steps. It may wait for the current Access query or AI request to finish first.</p>
+  <p>CFI DataClean also creates a matching text run log beside the workbook, using a name like <code>Mescalero_CFIDataCleanCleaning_20260604_1200_RunLog.txt</code>. If the run fails before the Excel workbook is created, check that text log for the failure message, major progress step, and troubleshooting details. The log also records source database size, temporary-drive free space, major step timings, and slow Access SQL previews so slow runs can be diagnosed and improved.</p>
+
+  <h2>10. What the Excel Workbook Contains</h2>
+  <p>CFI DataClean saves a separate Excel workbook. The workbook is the main thing you review after a run.</p>
+  <p>Numeric-looking values in the workbook are written as Excel numbers where it is safe to do so, so they sort, filter, and calculate like numbers. Leading-zero codes such as <code>020</code> stay as text so the code is not changed.</p>
+  <p>Detail report tabs start with the most-used review columns: rule name, current-period number, current-period error count, previous-period number, previous-period error count, recorded value, verification SQL, and key plot/tree context. The period error-count columns show <code>1</code> when that finding belongs to the selected current or previous period and <code>0</code> otherwise. The <strong>TotalHeight</strong> tab is arranged differently for easier review: after rule name it shows previous period number, previous total height, current period number, current total height, and height change before the recorded value and verification SQL. The tree <strong>IDBH</strong> tab is also arranged for DBH review: IDBH jump checks use previous period number, previous IDBH, current period number, current IDBH, and IDBHJump, while IDBH shrinkage checks use earlier period number, earlier IDBH, later period number, later IDBH, and shrinkage. IDBH jump cells are shaded green; IDBH shrinkage cells are shaded red. Regen IDBH stays separate because regen IDBH is a class-code check, not a tree DBH shrinkage check. <code>PeriodScope</code> still appears beside <code>PeriodNumber</code> so reviewers can filter rows by current period, previous period, other periods, or all/no-period checks. Field tabs use lightweight color zones: blue for review/action columns, yellow for the recorded value, green for supporting context, and gray for extra audit details at the end.</p>
+  <table>
+    <tr>
+      <th>Workbook part</th>
+      <th>What it means</th>
+    </tr>
+    <tr>
+      <td><strong>Summary</strong></td>
+      <td>High-level list of worksheet names, total error counts, current-period error counts, previous-period error counts, other/all-period error counts, tables, and rules.</td>
+    </tr>
+    <tr>
+      <td><strong>Database Square</strong></td>
+      <td>Always directly after Summary. Shows whether plot, tree, regen, and custom-measurement counts line up for every measurement period in the database, even when normal cleaning checks are limited to selected periods. Regen does not have a separate parent table like Trees, so CFI DataClean shows a <strong>RegenMeasurements count by RegenMeasKey</strong> row and then compares <strong>RegenCustomMeasurements</strong> to it using the period decoded from <code>RegenMeasKey</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>Missing Trees</strong></td>
+      <td>Always directly after Database Square. Shows missing tree measurement rows if found, or an OK row if none are found.</td>
+    </tr>
+    <tr>
+      <td><strong>Run Data</strong></td>
+      <td>Settings used for the run, source database path, export path, text run-log path, thresholds, period scope, manual, AI settings used, runtime, audit counts, and the top slow timed steps. The API key is never included.</td>
+    </tr>
+    <tr>
+      <td><strong>Field tabs</strong></td>
+      <td>One tab per reviewed field, such as IDBH, TotalHeight, StemCount, SpeciesCode, TreeHistory, Regen IDBH, or custom fields.</td>
+    </tr>
+  </table>
+
+  <h3>Tab colors</h3>
+  <ul>
+    <li><strong>Red tabs:</strong> contain findings that need cleaning review.</li>
+    <li><strong>Green tabs:</strong> were reviewed and passed, meaning no data-entry errors were found for that active field.</li>
+    <li><strong>Database Square and Missing Trees:</strong> always appear directly after Summary. They are red when they contain errors and green when no errors are found.</li>
+    <li><strong>Run Data:</strong> follows those two project-wide check tabs.</li>
+  </ul>
+
+  <h3>Important columns</h3>
+  <table>
+    <tr>
+      <th>Column</th>
+      <th>How to use it</th>
+    </tr>
+    <tr>
+      <td><strong>RuleName</strong></td>
+      <td>The type of issue CFI DataClean found.</td>
+    </tr>
+    <tr>
+      <td><strong>RecordLabel</strong></td>
+      <td>A readable label for the row, such as plot/tree/period information.</td>
+    </tr>
+    <tr>
+      <td><strong>Recorded...Value</strong></td>
+      <td>The value or comparison that triggered the finding. This column is highlighted yellow.</td>
+    </tr>
+    <tr>
+      <td><strong>Verification SQL</strong></td>
+      <td>A SELECT query you can copy into Access to verify the finding yourself.</td>
+    </tr>
+    <tr>
+      <td><strong>AIMessage</strong></td>
+      <td>Project-specific guidance when AI export guidance was turned on.</td>
+    </tr>
+    <tr>
+      <td><strong>TreeRemarks, PlotRemarks, RegenRemarks</strong></td>
+      <td>Remarks from the database. These show even when blank so you know whether a remark was recorded.</td>
+    </tr>
+  </table>
+
+  <h3>Summary period counts</h3>
+  <p>The Summary tab separates total errors by measurement period when CFI DataClean can identify the period for a row.</p>
+  <ul>
+    <li><strong>CurrentPeriodNumber</strong> is the selected current measurement period.</li>
+    <li><strong>CurrentPeriodErrorCount</strong> is how many errors on that worksheet belong to the current period.</li>
+    <li><strong>PreviousPeriodNumber</strong> is the selected previous measurement period.</li>
+    <li><strong>PreviousPeriodErrorCount</strong> is how many errors on that worksheet belong to the previous period.</li>
+    <li><strong>OtherOrAllPeriodErrorCount</strong> is used for all-period checks, rows without a clear period, and rows outside the selected current/previous periods.</li>
+    <li><strong>CurrentPeriodNumber, CurrentPeriodErrorCount, PreviousPeriodNumber, PreviousPeriodErrorCount, and PeriodScope</strong> appear on the detail report tabs so reviewers can filter individual rows the same way the Summary tab counts them.</li>
+    <li><strong>Field tab color zones</strong> use blue for review/action columns, yellow for recorded values, green for supporting plot/tree/period context, and gray for extra audit detail columns.</li>
+    <li>Summary count columns are color-coded: total and other/all-period counts are yellow, current-period columns are blue, and previous-period columns are green. Nonzero count values are bold, and plot/tree/regen summary sections are separated with a thick line.</li>
+  </ul>
+
+  <h2>11. How to Review Findings</h2>
+  <ol>
+    <li>Start with the red tabs at the front of the workbook.</li>
+    <li>Read the plain-language <strong>Checked</strong> note at the top of the tab.</li>
+    <li>Find the yellow recorded-value column.</li>
+    <li>Use PlotNumber, TreeNumber, SpeciesCode, MinorPlot, PeriodNumber, TreeKey, or RegenMeasKey to find the record in the database or field notes.</li>
+    <li>Read TreeRemarks, PlotRemarks, or RegenRemarks before deciding whether a value is wrong.</li>
+    <li>Copy the VerificationSql into Access if you want to reproduce the finding.</li>
+    <li>Make database updates only after the field record or project guidance confirms the correction.</li>
+  </ol>
+
+  <h2>12. Important Cleaning Rules in Plain English</h2>
+  <h3>AppColumns controls what gets reviewed</h3>
+  <p>CFI DataClean reviews fields marked Active in the database <code>AppColumns</code> table. If a data item is not active, CFI DataClean usually skips it for data-entry cleaning. Some items, such as per-acre expansion fields, <code>CalcSiteIndex</code>, and <code>GMP</code>, are skipped even if active because they are not cleaning items.</p>
+  <p>CFI DataClean also adds <strong>Rule coverage diagnostic</strong> rows when matching records exist but a setup gap may prevent the check from fully running. These are not direct data edits. They are warnings such as: PlotStatus is missing or inactive, a required plot field is missing or inactive, TreeHistory is inactive, a tree species join is unavailable, a crown or radial increment field is missing or inactive, a needed join key such as PlotID or PeriodNumber is missing, or a regen minor-plot rule needs more setup.</p>
+
+  <h3>PlotStatus progression</h3>
+  <ul>
+    <li>CFI DataClean checks PlotStatus across all periods when the PlotStatus field is active in <code>AppColumns</code>.</li>
+    <li>Before a plot is installed, earlier periods should be blank or null.</li>
+    <li>The first nonblank PlotStatus for a plot should be <code>2</code>, which means initial install.</li>
+    <li>After a plot has received PlotStatus <code>2</code>, later periods should be <code>1</code>, <code>4</code>, <code>5</code>, <code>6</code>, or <code>7</code>. Later periods should not go back to blank.</li>
+    <li>A PlotStatus <code>5</code> not measured value before any initial install code is flagged for review.</li>
+  </ul>
+
+  <h3>Tree DBH</h3>
+  <ul>
+    <li>TreeHistory blank, <code>1</code>, <code>4</code>, <code>6</code>, <code>8</code>, and <code>9</code> can have blank DBH.</li>
+    <li>TreeHistory <code>1</code>, <code>4</code>, and <code>8</code> should not have DBH recorded.</li>
+    <li>TreeHistory <code>2</code>, <code>3</code>, and <code>7</code> can be checked for required DBH only if the matching Run option is turned on.</li>
+  </ul>
+
+  <h3>Plot data on not-measured or dropped plots</h3>
+  <ul>
+    <li>If PlotStatus is <code>4</code> missing plot, <code>5</code> not measured, <code>6</code> dropped - off reservation, or <code>7</code> dropped - other, most plot measurement and plot custom measurement data should not be recorded for that plot period.</li>
+    <li>CFI DataClean checks active plot fields and flags recorded values that should not be there.</li>
+    <li>Plot remarks are allowed because dropped plots often need an explanation.</li>
+    <li>UTM coordinates, management unit, and FLCCommercial are allowed because they are usually preloaded or still useful for locating/classifying the plot.</li>
+    <li>Key fields such as PlotID, PlotKey, PlotMeasKey, MeasurementID, and PeriodNumber are not treated as plot data for this rule.</li>
+  </ul>
+
+  <h3>Tree height</h3>
+  <ul>
+    <li>TreeHistory blank, <code>1</code>, <code>4</code>, <code>6</code>, <code>8</code>, and <code>9</code> can have blank height.</li>
+    <li>Height can be required for new or old mortality only when the matching Run option is turned on.</li>
+    <li>Height requirements can be limited to entered minor plots.</li>
+    <li>A shorter later height is allowed when a previously live tree, TreeHistory <code>0</code>, <code>5</code>, or <code>10</code>, becomes a mortality tree whose height is required by the selected Run options, TreeHistory <code>2</code>, <code>3</code>, or <code>7</code>. Dead trees can lose height through breakage.</li>
+  </ul>
+
+  <h3>Problem and severity codes</h3>
+  <ul>
+    <li>Problem and severity fields should agree. If a problem code is entered, the matching severity should be entered too.</li>
+    <li>If TreeHistory is <code>2</code> or <code>3</code> and Problem1 is recorded, Severity1 must be code <code>3</code>.</li>
+    <li>Blank, Null, and <code>0</code> count as no Problem1. Values greater than <code>0</code> count as an entered Problem1.</li>
+  </ul>
+
+  <h3>Tree data on not-measured or dropped plots</h3>
+  <ul>
+    <li>If the matching plot status is <code>4</code> missing plot, <code>5</code> not measured, <code>6</code> dropped - off reservation, or <code>7</code> dropped - other, tree measurement and tree custom measurement data should not be recorded for that plot period.</li>
+    <li>CFI DataClean checks active tree fields and flags recorded values such as TotalHeight, IDBH, TreeHistory, crown fields, problem codes, radial increment, and active tree custom fields.</li>
+    <li>Key fields such as TreeID, TreeKey, TreeMeasKey, MeasurementID, and PeriodNumber are not treated as tree data for this rule.</li>
+  </ul>
+
+  <h3>Regen data on not-measured or dropped plots</h3>
+  <ul>
+    <li>If the matching plot status is <code>4</code> missing plot, <code>5</code> not measured, <code>6</code> dropped - off reservation, or <code>7</code> dropped - other, regen measurement and regen custom measurement data should not be recorded for that plot period.</li>
+    <li>CFI DataClean checks active regen fields and flags recorded values such as MinorPlot, SpeciesCode, IDBH, StemCount, and active regen custom fields.</li>
+    <li>The exported row includes the matching PlotStatus code so reviewers can see why the regen value was flagged.</li>
+    <li>Regen remarks are allowed because they may explain why the plot was not measured or was dropped.</li>
+    <li>Regen records are linked by RegenMeasKey and plot/period information, not by TreeKey.</li>
+  </ul>
+
+  <h3>Ingrowth</h3>
+  <ul>
+    <li>New live trees on install plots with PlotStatus <code>2</code> should normally be TreeHistory <code>0</code>.</li>
+    <li>TreeHistory <code>10</code> is for new ingrowth trees on remeasurement plots.</li>
+    <li>TreeHistory <code>10</code> in the first project measurement period is flagged because first-period trees should normally be <code>0</code>.</li>
+    <li>TreeHistory <code>10</code> is flagged when the same tree has an earlier nonblank TreeHistory value. Earlier blank TreeHistory rows do not count as prior history.</li>
+    <li>A first-recorded live tree coded <code>0</code> on a PlotStatus <code>1</code> remeasurement plot after the first project period is flagged as possible missed ingrowth.</li>
+  </ul>
+  <p>The ingrowth check joins tree and plot measurements by both plot and measurement period before filtering. This helps avoid oversized Access temporary joins on large projects.</p>
+
+  <h3>Regen</h3>
+  <ul>
+    <li>Regen rows with RegenMeasKey, IDBH, StemCount, or MinorPlot data require SpeciesCode.</li>
+    <li>Regen rows with SpeciesCode greater than <code>0</code> require IDBH, StemCount, and MinorPlot.</li>
+    <li>Entered regen StemCount values are checked against the max regen stem count even when SpeciesCode is blank.</li>
+    <li>When selected-period filtering is on, CFI DataClean filters regen rows by PeriodNumber if present, then by ProjectPeriodID joined to ProjectMeasurementPeriods, and only falls back to decoding period from RegenMeasKey.</li>
+    <li>Valid regen IDBH class codes are <code>0</code>, <code>20</code>, and <code>40</code>.</li>
+    <li>Regen rows use <code>RegenMeasKey</code>, not TreeKey.</li>
+    <li>CFI DataClean adds Rule coverage diagnostic rows when setup may prevent full review, such as inactive SpeciesCode, missing prerequisite fields, blank matching MinorPlot allowed-list groups, or missing woodland species codes for woodland regen rules.</li>
+  </ul>
+
+  <h3>TreeClass and TreeStatus crosswalk checks</h3>
+  <p>When TreeClass or TreeStatus fields exist and are active in AppColumns, CFI DataClean compares them with TreeHistory using the supplied crosswalk logic. Clear mismatches are flagged. Conditional cases are sent to review instead of guessed. TreeClass <code>1</code>, <code>2</code>, <code>3</code>, <code>4</code>, and <code>9</code>, and TreeStatus <code>1</code>, <code>2</code>, and <code>3</code>, are treated as live and should generally align with TreeHistory <code>0</code>, <code>5</code>, or <code>10</code>.</p>
+  <p><strong>Recommended workflow:</strong> complete the crosswalk first, then run CFI DataClean as the main cleaning review. A light pre-crosswalk review is still useful for obvious structural problems, such as missing keys, duplicate records, broken relationships, or impossible numeric values. It is not the right time to make final calls on fields whose standard codes changed.</p>
+  <p>During the crosswalk, ignore cleaning-style findings that only exist because old project codes have not been converted yet. After the crosswalk is finished, rerun CFI DataClean and use the exported findings as the main cleaning workbook. If a finding still appears after crosswalking, verify it against the project manual, field records, or project-specific code-change notes before editing values.</p>
+  <p>The supplied crosswalk reference workbook is included with CFI DataClean: <a href="_CFIDataClean_AppFiles/References/TreeClass_Status_History_Crosswalk.xlsx">TreeClass_Status_History_Crosswalk.xlsx</a>. If this guide is opened in Microsoft Word, use Ctrl+click on the link or open the workbook from <code>_CFIDataClean_AppFiles\References</code>.</p>
+
+  <h2>13. Clearing the Screen</h2>
+  <p>Click <strong>Clear all</strong> beside <strong>Run</strong> when you want to remove the current database, uploaded project manual, woodland species-code list, and minor-plot rules from the app window.</p>
+  <p>Clear all does not delete any database or workbook files. It only clears the current app selections.</p>
+
+  <h2>14. Troubleshooting</h2>
+  <table>
+    <tr>
+      <th>Problem</th>
+      <th>What to try</th>
+    </tr>
+    <tr>
+      <td>The app opens and closes immediately.</td>
+      <td>Open <code>_CFIDataClean_AppFiles</code>, run <code>CFIDataClean-debug.cmd</code>, and read the visible message. The most common issue is missing Access/ACE database drivers. If the message says app files are missing, extract the ZIP first and run CFI DataClean from the extracted folder.</td>
+    </tr>
+    <tr>
+      <td>The debug window says the PowerShell script is not digitally signed.</td>
+      <td>Use the latest CFI DataClean launcher. It starts the app with a per-run PowerShell bypass so the user's computer-wide policy is not changed. If agency Group Policy still blocks it, IT will need to code-sign <code>_CFIDataClean_AppFiles\ForestInventoryCleaner.ps1</code> or deploy CFI DataClean through an approved software channel.</td>
+    </tr>
+    <tr>
+      <td>The app seems frozen.</td>
+      <td>Look at the progress text, progress bar, elapsed time, and window title. Large Access queries and AI requests can take time. Use Cancel run if needed.</td>
+    </tr>
+    <tr>
+      <td>A run failed and there is no Excel workbook.</td>
+      <td>Look for the matching <code>_RunLog.txt</code> file beside the workbook location you selected. The popup and on-screen log should also show this path. If Access failed during a write query, the log includes a shortened SQL preview.</td>
+    </tr>
+    <tr>
+      <td>No AI message appears in the workbook.</td>
+      <td>AI may be off, not fully set up, or Azure may have rejected a guidance request. The built-in findings still run without AI.</td>
+    </tr>
+    <tr>
+      <td>AI test says the endpoint is wrong.</td>
+      <td>Use only the real HTTPS endpoint. Do not paste a DOI/network prefix in front of it.</td>
+    </tr>
+    <tr>
+      <td>A field was not reviewed.</td>
+      <td>Check whether that field is active in <code>AppColumns</code> and whether valid codes are listed in <code>AppColumnCodes</code> when needed.</td>
+    </tr>
+    <tr>
+      <td>A custom measurement code was not checked.</td>
+      <td>Make sure the custom measurement field and code values are set up in <code>AppColumns</code> and <code>AppColumnCodes</code>.</td>
+    </tr>
+  </table>
+
+  <h2>15. Glossary</h2>
+  <table>
+    <tr>
+      <th>Term</th>
+      <th>Meaning</th>
+    </tr>
+    <tr>
+      <td><strong>Access database</strong></td>
+      <td>The <code>.mdb</code> or <code>.accdb</code> file that stores the project data.</td>
+    </tr>
+    <tr>
+      <td><strong>AppColumns</strong></td>
+      <td>A setup table that tells CFI DataClean which fields are active and should be reviewed.</td>
+    </tr>
+    <tr>
+      <td><strong>AppColumnCodes</strong></td>
+      <td>A setup table that lists valid code values for coded fields.</td>
+    </tr>
+    <tr>
+      <td><strong>IDBH</strong></td>
+      <td>Tree diameter value used by the project. For regen, IDBH is a class code: <code>0</code>, <code>20</code>, or <code>40</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>TreeHistory</strong></td>
+      <td>A code describing the tree's status/history across measurement periods.</td>
+    </tr>
+    <tr>
+      <td><strong>RegenMeasKey</strong></td>
+      <td>A key used for regen measurement records. It includes plot, period, minor plot, species, and IDBH class information.</td>
+    </tr>
+    <tr>
+      <td><strong>VerificationSql</strong></td>
+      <td>An Access SELECT query provided by CFI DataClean so you can verify a finding yourself.</td>
+    </tr>
+  </table>
+
+  <h2>16. Guide Maintenance</h2>
+  <p>This guide should be reviewed whenever CFI DataClean is updated. If the app adds, removes, or renames a button, Run option, export column, report tab, cleaning rule, AI behavior, or launcher file, update this guide before sharing the new build.</p>
+  <p>Shared release folders should include the app build number in the folder name, such as <code>CFI DataClean v1.0.00</code>. When a new app build is released, update the app version in <code>_CFIDataClean_AppFiles\ForestInventoryCleaner.ps1</code>, update this guide, and rename the shared folder so the folder name matches the build.</p>
+
+  <p class="small">Acknowledgement: selected reference checks in CFI DataClean were adapted from <code>CFI DB Cleaning 2.5.2026c.Rmd</code>, a CFI data-cleaning R script developed by Jesse Wooten. CFI DataClean implements those checks directly and does not require R to run.</p>
+</body>
+</html>

@@ -1,0 +1,50 @@
+# DADA generated outputs
+*_DADACleaning_*.xlsx
+CFI_GuideChecks_*.xlsx
+*_RunLog.txt
+*.log
+
+# Access databases and Access lock files
+*.mdb
+*.accdb
+*.ldb
+*.laccdb
+
+# Temporary/export working files
+~$*
+~audit_export_*/
+_tmp*/
+tmp/
+temp/
+
+# Local secrets and environment files
+.env
+.env.*
+*.key
+*.pem
+*.pfx
+*api*key*
+*secret*
+
+# Support/source-reference files that should not be posted without DOI/BIA approval
+_DADA_AppFiles/cfi-project-user-guide.docx
+_DADA_AppFiles/cfi-project-user-guide-extracted.json
+_DADA_AppFiles/cleaning-tips.xlsm
+_DADA_AppFiles/DADA-Codex-Thread-Backup-*.md
+_DADA_AppFiles/field-manual-text.json
+_DADA_AppFiles/References/
+
+# Block source/reference document formats by default.
+# The app code, launchers, icons, README, SECURITY, and HTML guide remain allowed.
+*.doc
+*.docx
+*.pdf
+*.xls
+*.xlsm
+*.xlsx
+*.json
+
+# Operating system noise
+Thumbs.db
+Desktop.ini
+.DS_Store
