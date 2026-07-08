@@ -33,6 +33,11 @@ if not exist "%PSEXE%" (
     exit /b 1
 )
 
+set "CFI_APP_ROOT=%APP_ROOT%"
+
+rem Try to remove the GitHub/Internet download block from the extracted files.
+"%PSEXE%" -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "try { Get-ChildItem -LiteralPath $env:CFI_APP_ROOT -Recurse -File | Unblock-File -ErrorAction SilentlyContinue } catch { }"
+
 start "" /d "%APP_DIR%" "%PSEXE%" -NoLogo -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -STA -File "%PS1%"
 
 exit /b 0
