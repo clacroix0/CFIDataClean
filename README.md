@@ -9,13 +9,15 @@
 
 CFI DataClean is a Windows desktop application that reviews CFI-style `.mdb` and `.accdb` databases for likely data-entry errors, missing records, invalid codes, and inconsistencies across measurement periods. It turns the findings into a structured Excel workbook that is easier to filter, verify, and hand off for correction.
 
-> **Non-destructive by design:** a Run checks a temporary copy of the selected database. CFI DataClean does not edit or delete records in the source database.
+> **Non-destructive by design:** A Run checks a temporary copy of the selected database. CFI DataClean does not edit or delete records in the source database.
 
 ## Why it exists
 
 CFI project data is distributed across related plot, tree, regeneration, and custom-measurement tables. Reviewing those relationships manually can be slow, inconsistent, and difficult to repeat across projects.
 
-CFI DataClean converts common quality-control rules into a repeatable workflow. It identifies records that need attention and supplies the context needed to investigate them, including remarks, measurement-period history, record identifiers, and verification SQL when available. The reviewer still confirms each correction against field records, project guidance, and the source database.
+CFI DataClean converts common quality-control rules into a repeatable workflow. It identifies records that need attention and supplies the context needed to investigate them, including remarks, measurement-period history, record identifiers, and verification SQL when available.
+
+The reviewer still confirms each correction against field records, project guidance, and the source database.
 
 ## Key features
 
@@ -26,20 +28,26 @@ CFI DataClean converts common quality-control rules into a repeatable workflow. 
 - Supports configurable period scope, thresholds, total-height protocols, woodland exclusions, and regeneration minor-plot rules.
 - Exports an `.xlsx` workbook with a Summary, project-wide checks, field-specific tabs, period context, remarks, and verification SQL.
 - Writes a matching text run log with progress, timing, and troubleshooting details.
-- Provides optional project-manual and Azure AI guidance without making AI a requirement for the core cleaning workflow.
+- Keeps the core cleaning and reporting workflow independent of AI.
 
 ## Screenshots
 
 ### Configure a cleaning review
 
 <a href="docs/images/cfi-dataclean-run-setup.png">
-  <img src="docs/images/cfi-dataclean-run-setup.png" alt="CFI DataClean Run tab showing database selection, period settings, quality-control thresholds, height protocols, regeneration rules, and run status" width="900">
+  <img
+    src="docs/images/cfi-dataclean-run-setup.png"
+    alt="CFI DataClean Run tab showing database selection, period settings, quality-control thresholds, height protocols, regeneration rules, and run status"
+    width="900">
 </a>
 
 ### Review the exported findings
 
 <a href="docs/images/cfi-dataclean-workbook.png">
-  <img src="docs/images/cfi-dataclean-workbook.png" alt="CFI DataClean Excel Summary worksheet showing period-specific error counts and color-coded review tabs" width="900">
+  <img
+    src="docs/images/cfi-dataclean-workbook.png"
+    alt="CFI DataClean Excel Summary worksheet showing period-specific error counts and color-coded review tabs"
+    width="900">
 </a>
 
 ## Installation
@@ -52,10 +60,13 @@ CFI DataClean converts common quality-control rules into a repeatable workflow. 
 
 ### Run the application
 
-1. Download the release ZIP and choose **Extract All**. Do not run the application from inside the compressed-folder preview.
-2. Keep `CFI DataClean.cmd` beside the `_CFIDataClean_AppFiles` folder.
-3. Double-click `CFI DataClean.cmd`.
-4. Select a CFI Access database when the application opens.
+1. Download the repository ZIP using **Code > Download ZIP**, or download the latest release ZIP when available.
+2. Right-click the downloaded ZIP and select **Extract All**. Do not run the application from inside the compressed-folder preview.
+3. Keep `CFIDataClean.cmd` beside the `_CFIDataClean_AppFiles` folder.
+4. Double-click `CFIDataClean.cmd`.
+5. Select a CFI Access database when the application opens.
+
+If the application closes before the window appears, run `CFIDataClean-debug.cmd` and review the displayed startup message.
 
 Startup troubleshooting and managed-deployment guidance are covered in the [User Guide](CFIDataClean-How-To-Guide.html).
 
@@ -63,7 +74,7 @@ Startup troubleshooting and managed-deployment guidance are covered in the [User
 
 1. Complete any required project-code crosswalk. For legacy projects, the post-crosswalk run should be the primary cleaning review.
 2. Select the Access database. CFI DataClean detects available measurement periods and fills the current and previous period settings when possible.
-3. Review the run options, including thresholds, period scope, height protocol, woodland species, and regeneration rules. Project-manual and AI guidance are optional.
+3. Review the run options, including thresholds, period scope, height protocol, woodland species, and regeneration rules.
 4. Click **Run**. The application checks a temporary database copy and creates an Excel workbook plus a text run log.
 5. Begin with the workbook Summary and red tabs. Review the supporting context and run the supplied verification SQL in Access when useful.
 6. Update the source database only after the field record or project guidance confirms the correction.
@@ -74,11 +85,11 @@ Startup troubleshooting and managed-deployment guidance are covered in the [User
 - `System.Data.OleDb` with 32-bit Microsoft ACE/Jet providers
 - Native Open XML generation for `.xlsx` reports
 - PowerShell runspaces for responsive background processing and cancellation
-- Optional Azure AI Foundry integration through REST APIs
+- Optional Azure AI Foundry integration retained in the codebase without being required for the default cleaning workflow
 
 ## Documentation
 
-The complete operating instructions, run-option definitions, cleaning-rule explanations, AI setup, workbook guidance, and troubleshooting steps are maintained in the [CFI DataClean User Guide](CFIDataClean-How-To-Guide.html).
+The complete operating instructions, run-option definitions, cleaning-rule explanations, workbook guidance, and troubleshooting steps are maintained in the [CFI DataClean User Guide](CFIDataClean-How-To-Guide.html).
 
 Additional references:
 
